@@ -118,7 +118,7 @@ class HidGamepadService : Service() {
     private fun notification(text: String): Notification {
         val pendingIntent = PendingIntent.getActivity(this, 0, Intent(this, MainActivity::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         return NotificationCompat.Builder(this, CHANNEL_ID).setSmallIcon(R.drawable.ic_gamepad)
-            .setContentTitle("Bluetooth Gamepad").setContentText(text).setOngoing(true).setContentIntent(pendingIntent).build()
+            .setContentTitle(getString(R.string.app_name)).setContentText(text).setOngoing(true).setContentIntent(pendingIntent).build()
     }
     private fun updateNotification(state: ConnectionState) {
         val text = when (state) {

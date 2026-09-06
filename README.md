@@ -1,4 +1,4 @@
-# Bluetooth Gamepad
+# BlueTooth GamePad & Mouse
 
 ## Current features
 
