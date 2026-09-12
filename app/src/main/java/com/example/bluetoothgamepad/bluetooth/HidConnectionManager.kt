@@ -6,7 +6,6 @@ import android.bluetooth.BluetoothDevice
 import android.bluetooth.BluetoothHidDevice
 import android.bluetooth.BluetoothProfile
 import android.content.Context
-import com.example.bluetoothgamepad.domain.GamepadProfile
 import com.example.bluetoothgamepad.domain.GamepadState
 import com.example.bluetoothgamepad.domain.HidReportEncoder
 import com.example.bluetoothgamepad.domain.MouseProfile
@@ -33,7 +32,6 @@ class HidConnectionManager(
 ) : BluetoothProfile.ServiceListener {
     private var hid: BluetoothHidDevice? = null
     private var host: BluetoothDevice? = null
-    private var profile: GamepadProfile? = null
     private var registered = false
 
     private val callback = object : BluetoothHidDevice.Callback() {
@@ -63,8 +61,7 @@ class HidConnectionManager(
         override fun onVirtualCableUnplug(device: BluetoothDevice) { host = null; onState(ConnectionState.Ready) }
     }
 
-    fun start(profile: GamepadProfile) {
-        this.profile = profile
+    fun start() {
         if (!adapter.isEnabled) { onState(ConnectionState.BluetoothOff); return }
         onState(ConnectionState.Registering)
         if (!adapter.getProfileProxy(context, this, BluetoothProfile.HID_DEVICE))
@@ -73,15 +70,18 @@ class HidConnectionManager(
     override fun onServiceConnected(profileId: Int, proxy: BluetoothProfile) {
         if (profileId != BluetoothProfile.HID_DEVICE) return
         hid = proxy as BluetoothHidDevice
-        val activeProfile=profile ?: return
-        val ok = hid?.registerApp(HidDescriptor.sdp(activeProfile), null, null, executor, callback) == true
+        val ok = hid?.registerApp(HidDescriptor.sdp(), null, null, executor, callback) == true
         if (!ok) onState(ConnectionState.Error("registerApp() was rejected"))
     }
     override fun onServiceDisconnected(profileId: Int) {
         hid = null; registered = false; host = null
         onState(if (adapter.isEnabled) ConnectionState.Error("HID service disconnected") else ConnectionState.BluetoothOff)
     }
+    /** True once the HID application has actually been accepted by the Bluetooth stack. */
+    val isRegistered: Boolean get() = registered
+
     fun bondedDevices(): List<BluetoothDevice> = adapter.bondedDevices.sortedBy { it.name ?: it.address }
+
     fun connect(device: BluetoothDevice): Boolean {
         if (!registered) return false
         onState(ConnectionState.Connecting(device))

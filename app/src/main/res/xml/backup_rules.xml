@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Legacy (API 30 and below) Auto Backup rules; see data_extraction_rules.xml for API 31+. -->
+<full-backup-content>
+    <exclude domain="file" path="datastore/gamepad_settings.preferences_pb" />
+</full-backup-content>

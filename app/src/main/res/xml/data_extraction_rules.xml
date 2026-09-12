@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Settings are stored in a DataStore file. They are small and contain no personal data,
+  but the wallpaper entry is a content:// URI whose persistable grant is device-local, so
+  the wallpaper reference is excluded from cloud backup and device transfer.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="file" path="datastore/gamepad_settings.preferences_pb" />
+    </cloud-backup>
+    <device-transfer>
+        <exclude domain="file" path="datastore/gamepad_settings.preferences_pb" />
+    </device-transfer>
+</data-extraction-rules>

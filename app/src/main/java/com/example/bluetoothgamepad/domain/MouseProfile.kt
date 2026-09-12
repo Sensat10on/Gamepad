@@ -2,7 +2,7 @@ package com.example.bluetoothgamepad.domain
 
 object MouseProfile : GamepadProfile {
     override val id = "mouse"
-    override val displayName = "Мышь / тачпад"
+    override val displayName = "Mouse / touchpad"
     override val reportId = 2
     override val reportDescriptor = byteArrayOf(
         0x05,0x01, 0x09,0x02, 0xA1.toByte(),0x01, 0x85.toByte(),0x02,
@@ -17,7 +17,11 @@ object MouseProfile : GamepadProfile {
         0xC0.toByte(), 0xC0.toByte()
     )
     override fun encode(state:GamepadState)=byteArrayOf(0,0,0,0)
+    /**
+     * Relative motion is clamped to ±64 instead of ±16 so the "pointer speed" setting has room to
+     * work; the descriptor allows -127..127, so this stays well inside the logical range.
+     */
     fun encodeMouse(buttons:Int,dx:Int,dy:Int,wheel:Int)=byteArrayOf(
-        (buttons and 7).toByte(),dx.coerceIn(-16,16).toByte(),dy.coerceIn(-16,16).toByte(),wheel.coerceIn(-24,24).toByte()
+        (buttons and 7).toByte(),dx.coerceIn(-64,64).toByte(),dy.coerceIn(-64,64).toByte(),wheel.coerceIn(-24,24).toByte()
     )
 }

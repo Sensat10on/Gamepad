@@ -18,7 +18,7 @@ import com.example.bluetoothgamepad.data.GamepadSettings
 import com.example.bluetoothgamepad.ui.UiStrings
 import com.example.bluetoothgamepad.ui.WallpaperLayer
 
-@Composable fun AppearanceScreen(settings:GamepadSettings,text:UiStrings,onSave:(String?,Long,Float,Float,Float,Boolean,Long,Long,Boolean,Long,Long)->Unit){
+@Composable fun AppearanceScreen(settings:GamepadSettings,text:UiStrings,onSave:(GamepadSettings)->Unit){
     val context=LocalContext.current
     var backgroundUri by remember(settings.backgroundUri){mutableStateOf(settings.backgroundUri)}
     var controlColor by remember(settings.controlColor){mutableLongStateOf(settings.controlColor)}
@@ -31,9 +31,17 @@ import com.example.bluetoothgamepad.ui.WallpaperLayer
     var darkTheme by remember(settings.darkTheme){mutableStateOf(settings.darkTheme)}
     var buttonLabelColor by remember(settings.buttonLabelColor){mutableLongStateOf(settings.buttonLabelColor)}
     var dpadLineColor by remember(settings.dpadLineColor){mutableLongStateOf(settings.dpadLineColor)}
+    var playStationGlyphs by remember(settings.playStationGlyphs){mutableStateOf(settings.playStationGlyphs)}
+    var showPadBody by remember(settings.showPadBody){mutableStateOf(settings.showPadBody)}
+    var padImageUri by remember(settings.padImageUri){mutableStateOf(settings.padImageUri)}
     val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->uri?.let{
         runCatching{context.contentResolver.takePersistableUriPermission(it,Intent.FLAG_GRANT_READ_URI_PERMISSION)}
         backgroundUri=it.toString()
+    }}
+    // Separate grant and separate state: the shell image is independent of the wallpaper.
+    val padPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()){uri->uri?.let{
+        runCatching{context.contentResolver.takePersistableUriPermission(it,Intent.FLAG_GRANT_READ_URI_PERMISSION)}
+        padImageUri=it.toString()
     }}
     val colors=listOf(0xFF6750A4L,0xFF1565C0L,0xFF00897BL,0xFF2E7D32L,0xFFC62828L,0xFFF57C00L,0xFF616161L,0xFFE91E63L)
     val textColors=listOf(0xFFFFFFFFL,0xFF000000L,0xFFFFF176L,0xFF80D8FFL,0xFFA7FFEBL,0xFFFF8A80L)
@@ -55,6 +63,23 @@ import com.example.bluetoothgamepad.ui.WallpaperLayer
             Text(cropLabels[1]);Slider(offsetX,{offsetX=it},valueRange=-1f..1f)
             Text(cropLabels[2]);Slider(offsetY,{offsetY=it},valueRange=-1f..1f)
         }
+        // ---- controller shell: skin shape plus an image of its own ----
+        val padLabels=when(settings.language){
+            "uk"->listOf("Корпус геймпада","Малювати корпус","Зображення на корпусі","Вибрати зображення","Прибрати зображення","Малюнок обрізається за формою корпусу, елементи керування залишаються зверху.","Скін залежить від типу геймпада.")
+            "en"->listOf("Controller shell","Draw the shell","Image on the shell","Choose image","Remove image","The image is cropped to the shell shape; the controls stay on top.","The skin follows the selected gamepad type.")
+            else->listOf("Корпус геймпада","Рисовать корпус","Картинка на корпусе","Выбрать изображение","Убрать изображение","Изображение обрезается по форме корпуса, элементы управления остаются сверху.","Скин зависит от выбранного типа геймпада.")
+        }
+        Text(padLabels[0],style=MaterialTheme.typography.titleLarge)
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text(padLabels[1]);Switch(showPadBody,{showPadBody=it})}
+        Text(padLabels[6],style=MaterialTheme.typography.bodySmall)
+        if(showPadBody){
+            Column(verticalArrangement=Arrangement.spacedBy(8.dp)){
+                Button(onClick={padPicker.launch(arrayOf("image/*"))}){Text(padLabels[3])}
+                if(padImageUri!=null)OutlinedButton(onClick={padImageUri=null}){Text(padLabels[4])}
+            }
+            padImageUri?.let{Text(it.substringAfterLast('/'),style=MaterialTheme.typography.bodySmall)}
+            Text(padLabels[5],style=MaterialTheme.typography.bodySmall)
+        }
         Text(text.buttonColor,style=MaterialTheme.typography.titleLarge)
         Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(14.dp)){colors.forEach{argb->Box(Modifier.size(54.dp).background(Color(argb.toInt()),CircleShape).border(if(controlColor==argb)4.dp else 1.dp,Color.White,CircleShape).clickable{controlColor=argb})}}
         val fontLabels=when(settings.language){"uk"->listOf("Автоматичний колір тексту","Колір тексту");"en"->listOf("Automatic text color","Text color");else->listOf("Автоматический цвет текста","Цвет текста")}
@@ -63,7 +88,21 @@ import com.example.bluetoothgamepad.ui.WallpaperLayer
         val detailLabels=when(settings.language){"uk"->listOf("Колір символів на кнопках","Колір ліній D-pad");"en"->listOf("Button label color","D-pad line color");else->listOf("Цвет символов на кнопках","Цвет линий D-pad")}
         Text(detailLabels[0],style=MaterialTheme.typography.titleLarge);Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(14.dp)){textColors.forEach{argb->Box(Modifier.size(54.dp).background(Color(argb.toInt()),CircleShape).border(if(buttonLabelColor==argb)4.dp else 1.dp,Color.Gray,CircleShape).clickable{buttonLabelColor=argb})}}
         Text(detailLabels[1],style=MaterialTheme.typography.titleLarge);Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),horizontalArrangement=Arrangement.spacedBy(14.dp)){textColors.forEach{argb->Box(Modifier.size(54.dp).background(Color(argb.toInt()),CircleShape).border(if(dpadLineColor==argb)4.dp else 1.dp,Color.Gray,CircleShape).clickable{dpadLineColor=argb})}}
+        // Face-button glyphs. Previously this was a "PlayStation-style" profile that changed nothing
+        // on the wire, so it lives here as a purely cosmetic option.
+        val glyphLabels=when(settings.language){"uk"->"Символи на кнопках";"en"->"Face button glyphs";else->"Символы на кнопках"}
+        Text(glyphLabels,style=MaterialTheme.typography.titleLarge)
+        Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+            Text(if(playStationGlyphs)"○  □  ✕  △" else "A  B  X  Y",style=MaterialTheme.typography.titleMedium)
+            Switch(playStationGlyphs,{playStationGlyphs=it})
+        }
         Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){Text(text.darkTheme);Switch(darkTheme,{darkTheme=it})}
-        Button(onClick={onSave(backgroundUri,controlColor,zoom,offsetX,offsetY,automaticTextColor,textColor,backgroundColor,darkTheme,buttonLabelColor,dpadLineColor)}){Text(text.save)}
+        Button(onClick={onSave(settings.copy(
+            backgroundUri=backgroundUri,controlColor=controlColor,wallpaperZoom=zoom,
+            wallpaperOffsetX=offsetX,wallpaperOffsetY=offsetY,automaticTextColor=automaticTextColor,
+            textColor=textColor,backgroundColor=backgroundColor,darkTheme=darkTheme,
+            buttonLabelColor=buttonLabelColor,dpadLineColor=dpadLineColor,playStationGlyphs=playStationGlyphs,
+            showPadBody=showPadBody,padImageUri=padImageUri
+        ))}){Text(text.save)}
     }
 }

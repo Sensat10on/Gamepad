@@ -14,13 +14,23 @@ import com.example.bluetoothgamepad.domain.ProfileKind
 import com.example.bluetoothgamepad.ui.*
 
 @Composable fun SettingsScreen(settings:GamepadSettings,text:UiStrings,onProfile:(ProfileKind)->Unit,onLanguage:(String)->Unit,onSave:(GamepadSettings)->Unit) {
-    var draft by remember(settings){mutableStateOf(settings)}
+    // Deliberately NOT keyed on `settings`: changing the profile or language writes to DataStore
+    // immediately, which would recreate the draft and silently discard unsaved slider edits.
+    var draft by remember { mutableStateOf(settings) }
     val view=LocalView.current
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(24.dp),verticalArrangement=Arrangement.spacedBy(12.dp)){
         Text(text.controllerProfile,style=MaterialTheme.typography.titleLarge)
         var profilesExpanded by remember{mutableStateOf(false)}
         val selectedProfile=ProfileKind.fromId(draft.selectedProfile)
-        Box{OutlinedButton(onClick={profilesExpanded=true},modifier=Modifier.width(280.dp)){Text("${selectedProfile.profile.displayName}  ▼")};DropdownMenu(expanded=profilesExpanded,onDismissRequest={profilesExpanded=false},modifier=Modifier.width(280.dp)){ProfileKind.entries.forEach{kind->DropdownMenuItem(text={Text(kind.profile.displayName)},onClick={draft=draft.copy(selectedProfile=kind.profile.id);onProfile(kind);profilesExpanded=false})}}}
+        Box{OutlinedButton(onClick={profilesExpanded=true},modifier=Modifier.width(280.dp)){Text("${selectedProfile.title(draft.language)}  ▼")};DropdownMenu(expanded=profilesExpanded,onDismissRequest={profilesExpanded=false},modifier=Modifier.width(280.dp)){ProfileKind.entries.forEach{kind->DropdownMenuItem(text={Text(kind.title(draft.language))},onClick={draft=draft.copy(selectedProfile=kind.profile.id);onProfile(kind);profilesExpanded=false})}}}
+        // The two full gamepads look identical on screen; only the button indices differ, so say
+        // which host each one is meant for.
+        val profileHint=when(selectedProfile){
+            ProfileKind.GAMEPAD->when(draft.language){"uk"->"Порядок кнопок для Windows та інших DirectInput-хостів";"en"->"Button order for Windows and other DirectInput hosts";else->"Порядок кнопок для Windows и других DirectInput-хостов"}
+            ProfileKind.ANDROID->when(draft.language){"uk"->"Порядок кнопок, який очікують Android і Android TV";"en"->"Button order expected by Android and Android TV";else->"Порядок кнопок, который ожидают Android и Android TV"}
+            else->null
+        }
+        profileHint?.let{Text(it,style=MaterialTheme.typography.bodySmall)}
         Text("${text.language}:")
         var languagesExpanded by remember{mutableStateOf(false)}
         val selectedLanguage=AppLanguage.fromCode(draft.language)

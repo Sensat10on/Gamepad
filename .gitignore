@@ -10,11 +10,14 @@ captures/
 .kotlin/
 *.keystore
 *.jks
+keystore.properties
+!keystore.properties.example
 .env
 .env.*
 !.env.example
 /Release/
 /screens/
+/PADs/
 /*.png
 /window.xml
 /tablet-menu.xml
