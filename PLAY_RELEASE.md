@@ -49,11 +49,10 @@ Play App Signing обязателен: при первой загрузке AAB 
 2. GitHub → Settings → Pages → Source: *Deploy from a branch* → Branch: `main`, папка `/docs` → Save.
 3. Через минуту URL: `https://sensat10on.github.io/Gamepad/privacy.html`
 
-⚠️ **Репозиторий приватный, а Play требует публично доступный URL.** Варианты:
-- сделать репозиторий публичным;
-- либо создать отдельный публичный репозиторий только с политикой;
-- либо опубликовать текст как публичный Gist — URL гиста тоже подходит
-  (требование: «active, publicly accessible and non-geofenced URL, no PDFs»).
+✅ **Сделано.** Репозиторий переведён в публичный, Pages включён, страница проверена:
+`https://sensat10on.github.io/Gamepad/privacy.html` отдаёт **HTTP 200**, с тему Primer,
+контактным адресом и разделом «Контакты». Эту ссылку указывать в Play Console →
+App content → Privacy policy и в Data safety.
 
 ✅ Контактный адрес в политике: **Senast10on85@gmail.com**. Его же укажите в Play Console →
 Store settings → Contact details, чтобы адреса совпадали.
@@ -182,7 +181,8 @@ Notes for the reviewer:
 ## 5. Что осталось за владельцем
 
 1. ✅ **Контактный e-mail** — `Senast10on85@gmail.com` (вписан в политику; продублировать в Play Console → Store settings).
-2. ⬜ **Где разместить политику** — репозиторий приватный, нужен публичный URL (п. 1.3).
+2. ✅ **Публичный URL политики** — репозиторий публичный, Pages включён:
+   `https://sensat10on.github.io/Gamepad/privacy.html` (проверено, HTTP 200).
 3. ⬜ **Видео** для декларации foreground service — снять по сценарию из п. 1.4.
 4. ⬜ **Резервная копия ключа** — `release.jks` + `keystore.properties` в два независимых места.
 5. ⬜ **Скриншоты** — выбрать 2–8 кадров из `screens/` (тексты описаний уже готовы: `store/listing.md`).
