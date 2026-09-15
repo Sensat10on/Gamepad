@@ -2,7 +2,6 @@ package com.example.bluetoothgamepad.viewmodel
 
 import android.app.Application
 import android.annotation.SuppressLint
-import android.bluetooth.BluetoothDevice
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
@@ -10,6 +9,7 @@ import android.os.VibratorManager
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.bluetoothgamepad.bluetooth.ConnectionState
+import com.example.bluetoothgamepad.bluetooth.DeviceEntry
 import com.example.bluetoothgamepad.bluetooth.HidGamepadService
 import com.example.bluetoothgamepad.data.GamepadSettings
 import com.example.bluetoothgamepad.data.SettingsRepository
@@ -37,7 +37,7 @@ class GamepadViewModel(app: Application) : AndroidViewModel(app) {
     val gamepadState = _gamepadState.asStateFlow()
     private val _connection = MutableStateFlow<ConnectionState>(ConnectionState.Ready)
     val connection = _connection.asStateFlow()
-    private val _devices = MutableStateFlow<List<BluetoothDevice>>(emptyList())
+    private val _devices = MutableStateFlow<List<DeviceEntry>>(emptyList())
     val devices = _devices.asStateFlow()
     private val _blocker = MutableStateFlow<StartupBlocker?>(null)
     val blocker = _blocker.asStateFlow()
@@ -53,6 +53,13 @@ class GamepadViewModel(app: Application) : AndroidViewModel(app) {
 
     /** Bitmask of currently held mouse buttons, so pointer motion can drag while a button is down. */
     private var mouseButtons = 0
+
+    /**
+     * Cleared while the app is not in the foreground so a gesture that is cancelled during the stop
+     * sequence cannot push a non-neutral report after [neutralize].
+     */
+    @Volatile
+    private var acceptingInput = true
 
     fun attach(service: HidGamepadService) {
         this.service = service
@@ -89,11 +96,16 @@ class GamepadViewModel(app: Application) : AndroidViewModel(app) {
 
     fun refreshDevices() { _devices.value = service?.allDevices().orEmpty() }
     fun searchDevices() { service?.searchDevices(); refreshDevices() }
-    fun setBlocker(blocker: StartupBlocker?) { _blocker.value = blocker }
 
-    fun connect(device: BluetoothDevice) {
-        service?.connect(device)
-        viewModelScope.launch { repository.setLastHost(device.address) }
+    fun setBlocker(blocker: StartupBlocker?) {
+        _blocker.value = blocker
+        // Without BLUETOOTH_CONNECT the cached list is unusable and must not stay on screen.
+        if (blocker == StartupBlocker.PERMISSION) _devices.value = emptyList()
+    }
+
+    fun connect(entry: DeviceEntry) {
+        service?.connectByAddress(entry.address)
+        viewModelScope.launch { repository.setLastHost(entry.address) }
     }
 
     fun disconnect() { service?.disconnect() }
@@ -105,6 +117,7 @@ class GamepadViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     fun update(transform: (GamepadState) -> GamepadState) {
+        if (!acceptingInput) return
         val before = _gamepadState.value
         _gamepadState.update(transform)
         val after = _gamepadState.value
@@ -112,13 +125,20 @@ class GamepadViewModel(app: Application) : AndroidViewModel(app) {
         service?.sendState(after)
     }
 
-    /** Returns every control to neutral; called when the UI goes away or is stopped. */
+    /**
+     * Returns every control to neutral. Input is suppressed until [resumeInput], because the
+     * `finally` block of a cancelled gesture runs *after* this and would otherwise push a
+     * non-neutral report straight back to the host.
+     */
     fun neutralize() {
+        acceptingInput = false
         _gamepadState.value = GamepadState()
         mouseButtons = 0
         service?.sendState(GamepadState())
         service?.sendMouse()
     }
+
+    fun resumeInput() { acceptingInput = true }
 
     fun moveMouse(dx: Int, dy: Int, wheel: Int = 0) { service?.sendMouse(mouseButtons, dx, dy, wheel) }
 

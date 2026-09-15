@@ -27,11 +27,12 @@ android {
         // BluetoothHidDevice (the HID Device role used by this app) was added in API 28,
         // so 28 is the hard floor: the app cannot run on anything older.
         minSdk = 28
-        // Kept one level below compileSdk on purpose: Android 16 (API 36) ignores the
-        // activity's fixed screenOrientation on large screens, which would break the
-        // landscape gamepad layout. Targeting 35 keeps the orientation lock working.
-        targetSdk = 35
-        versionCode = 3
+        // Google Play requires new apps and updates to target API 36 since 31 Aug 2026, so the
+        // earlier "stay on 35 to keep the orientation lock" trick is no longer an option. Android 16
+        // ignores a fixed screenOrientation on large screens for API 36 targets; the layouts adapt
+        // to any window size, and phones (smallest width < 600dp) still honour sensorLandscape.
+        targetSdk = 36
+        versionCode = 4
         versionName = "1.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -66,6 +67,9 @@ android {
         warningsAsErrors = false
         // Version-currency warnings are informational and must not break the build.
         disable += setOf("AndroidGradlePluginVersion", "GradleDependency", "NewerVersionAvailable", "OldTargetApi")
+        // ObsoleteSdkInt claims mipmap-anydpi-v26 can drop the qualifier because minSdk is 28, but
+        // AAPT then fails to resolve mipmap/ic_launcher at all. Keep the qualifier.
+        disable += "ObsoleteSdkInt"
     }
 }
 

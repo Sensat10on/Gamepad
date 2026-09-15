@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Adaptive launcher icon foreground. Drawn inside the 108x108 viewport but kept within the
+  central safe zone so no part of the pad is cut by the launcher's mask (circle, squircle, ...).
+  The "holes" are painted in the background colour, which is why they are not real holes.
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- shell -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M28,44 h52 a10,10 0 0 1 10,10 v6 a10,10 0 0 1 -10,10 h-52 a10,10 0 0 1 -10,-10 v-6 a10,10 0 0 1 10,-10 z" />
+    <!-- d-pad -->
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M35.5,49 h5 v5.5 h5.5 v5 h-5.5 v5.5 h-5 v-5.5 h-5.5 v-5 h5.5 z" />
+    <!-- face buttons -->
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M70,47 a3.5,3.5 0 1,0 0,7 a3.5,3.5 0 1,0 0,-7 z" />
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M76.5,53.5 a3.5,3.5 0 1,0 0,7 a3.5,3.5 0 1,0 0,-7 z" />
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M70,60 a3.5,3.5 0 1,0 0,7 a3.5,3.5 0 1,0 0,-7 z" />
+    <path
+        android:fillColor="#6750A4"
+        android:pathData="M63.5,53.5 a3.5,3.5 0 1,0 0,7 a3.5,3.5 0 1,0 0,-7 z" />
+</vector>

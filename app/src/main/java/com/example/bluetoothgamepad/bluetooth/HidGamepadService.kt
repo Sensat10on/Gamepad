@@ -18,6 +18,7 @@ import android.content.pm.PackageManager
 import android.os.Binder
 import android.os.Build
 import android.os.IBinder
+import android.os.SystemClock
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import com.example.bluetoothgamepad.MainActivity
@@ -30,7 +31,7 @@ import com.example.bluetoothgamepad.domain.MouseProfile
 import com.example.bluetoothgamepad.ui.strings
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
@@ -62,6 +63,11 @@ class HidGamepadService : Service() {
 
     /** Incremented whenever the proxy is replaced or closed, to invalidate late callbacks. */
     private var managerGeneration = 0
+    /**
+     * Written from the main thread when the settings change and read from the sender coroutine on
+     * [Dispatchers.Default]; volatile so the sender never encodes with a stale profile.
+     */
+    @Volatile
     private var profile: GamepadProfile = StandardGamepadProfile
     private var language = "ru"
     private var destroyed = false
@@ -72,8 +78,12 @@ class HidGamepadService : Service() {
     /** Forces an immediate re-send of [requestedState] (used right after a host connects). */
     private val resendRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
 
-    /** Only ever touched from the sender coroutine, so no synchronization is required. */
+    /** Only written from the sender coroutine; cleared from the main thread on a profile switch. */
+    @Volatile
     private var lastSent: GamepadState? = null
+
+    /** Time of the last successful report; read and written only by the sender coroutine. */
+    private var lastSendAt = 0L
     private var sender: Job? = null
 
     private val _nearbyDevices = MutableStateFlow<List<BluetoothDevice>>(emptyList())
@@ -153,6 +163,17 @@ class HidGamepadService : Service() {
      * every activity (re)attach.
      */
     fun startGamepad(selected: GamepadProfile) {
+        val previous = profile
+        if (previous !== selected && manager != null) {
+            // Switching profile changes the report id and the payload. Release everything the old
+            // profile may have left pressed on the host first, and drop the "already sent" marker
+            // so the first report of the new profile is not swallowed by it.
+            runCatching {
+                manager?.send(previous.reportId, previous.encode(GamepadState()))
+                if (previous === MouseProfile) manager?.send(KeyboardReport.REPORT_ID, KeyboardReport.encode(0))
+            }
+            lastSent = null
+        }
         profile = selected
         if (!hasBluetoothPermission()) {
             _connectionState.value = ConnectionState.Error("Bluetooth permission required")
@@ -189,22 +210,50 @@ class HidGamepadService : Service() {
         if (!destroyed) updateNotification(_connectionState.value)
     }
 
-    @OptIn(FlowPreview::class)
+    /**
+     * Sends the newest state at most once per [SEND_INTERVAL_MS].
+     *
+     * The rate limit is applied by hand rather than with `sample()`: `sample` runs its own ticker,
+     * so the coroutine woke up 100 times a second for the whole session even when nothing changed.
+     * Collecting the StateFlow directly means the collector simply suspends until the state really
+     * changes, and a state change that arrives during the delay replaces the pending one.
+     */
     private suspend fun sendLoop() {
-        val coalesced = requestedState.sample(SEND_INTERVAL_MS).distinctUntilChanged().map { it to false }
-        val forced = resendRequests.map { requestedState.value to true }
-        merge(coalesced, forced).collect { (state, force) ->
+        merge(
+            requestedState.map { it to false },
+            resendRequests.map { requestedState.value to true }
+        ).collect { (state, force) ->
+            val sinceLast = SystemClock.elapsedRealtime() - lastSendAt
+            if (sinceLast < SEND_INTERVAL_MS) delay(SEND_INTERVAL_MS - sinceLast)
             if (!force && state == lastSent) return@collect
-            if (manager?.send(profile.reportId, profile.encode(state)) == true) lastSent = state
+            if (manager?.send(profile.reportId, profile.encode(state)) == true) {
+                lastSent = state
+                lastSendAt = SystemClock.elapsedRealtime()
+            }
         }
     }
 
-    fun bondedDevices(): List<BluetoothDevice> = if (hasBluetoothPermission()) manager?.bondedDevices().orEmpty() else emptyList()
-
-    /** Returns an empty list once BLUETOOTH_CONNECT is gone; device.address would throw otherwise. */
-    fun allDevices(): List<BluetoothDevice> {
+    /**
+     * Devices prepared for the UI. Returns an empty list once BLUETOOTH_CONNECT is gone, and never
+     * lets a SecurityException escape: the permission can be revoked between the check and the use.
+     */
+    fun allDevices(): List<DeviceEntry> {
         if (!hasBluetoothPermission()) return emptyList()
-        return (bondedDevices() + nearbyDevices.value).distinctBy { it.address }.sortedBy { deviceLabel(it) }
+        return runCatching {
+            (manager?.bondedDevices().orEmpty() + nearbyDevices.value)
+                .distinctBy { it.address }
+                .map { DeviceEntry(it.address, deviceLabel(it), isBonded(it)) }
+                .sortedBy { it.label }
+        }.getOrDefault(emptyList())
+    }
+
+    /** Connects by address so the UI never has to hold a [BluetoothDevice]. */
+    fun connectByAddress(address: String): Boolean {
+        if (!hasBluetoothPermission()) return false
+        val device = runCatching {
+            (manager?.bondedDevices().orEmpty() + nearbyDevices.value).firstOrNull { it.address == address }
+        }.getOrNull() ?: return false
+        return connect(device)
     }
 
     /** Guarded by an explicit [hasBluetoothPermission] check above. */
@@ -295,6 +344,13 @@ class HidGamepadService : Service() {
     private fun deviceLabel(device: BluetoothDevice): String {
         if (!hasBluetoothPermission()) return "—"
         return runCatching { device.name ?: device.address }.getOrDefault("—")
+    }
+
+    /** Bond state, or false when the permission disappeared since the caller's own check. */
+    @SuppressLint("MissingPermission")
+    private fun isBonded(device: BluetoothDevice): Boolean {
+        if (!hasBluetoothPermission()) return false
+        return runCatching { device.bondState == BluetoothDevice.BOND_BONDED }.getOrDefault(false)
     }
 
     private fun createChannel() {

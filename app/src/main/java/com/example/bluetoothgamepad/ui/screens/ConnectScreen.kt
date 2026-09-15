@@ -20,17 +20,25 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.example.bluetoothgamepad.bluetooth.ConnectionState
+import com.example.bluetoothgamepad.bluetooth.DeviceEntry
 import com.example.bluetoothgamepad.ui.UiStrings
 import com.example.bluetoothgamepad.viewmodel.StartupBlocker
 
+/**
+ * Reads a device label without ever throwing: BLUETOOTH_CONNECT can be revoked while this screen is
+ * still showing a device that was read earlier.
+ */
 @SuppressLint("MissingPermission")
+private fun safeDeviceLabel(device: BluetoothDevice): String =
+    runCatching { device.name ?: device.address }.getOrDefault("—")
+
 @Composable fun ConnectScreen(
     state: ConnectionState,
-    devices: List<BluetoothDevice>,
+    devices: List<DeviceEntry>,
     text: UiStrings,
     blocker: StartupBlocker?,
     onRefresh: () -> Unit,
-    onConnect: (BluetoothDevice) -> Unit,
+    onConnect: (DeviceEntry) -> Unit,
     onDisconnect: () -> Unit,
     onStop: () -> Unit,
     onOpenSettings: () -> Unit,
@@ -42,7 +50,7 @@ import com.example.bluetoothgamepad.viewmodel.StartupBlocker
         Text(text.appName, style = MaterialTheme.typography.headlineMedium)
         Text(
             when (state) {
-                is ConnectionState.Connected -> "${text.connected}: ${state.device.name ?: state.device.address}"
+                is ConnectionState.Connected -> "${text.connected}: ${safeDeviceLabel(state.device)}"
                 is ConnectionState.Connecting -> text.connecting
                 is ConnectionState.Error -> text.connectionError
                 ConnectionState.BluetoothOff -> text.bluetoothOff
@@ -70,14 +78,13 @@ import com.example.bluetoothgamepad.viewmodel.StartupBlocker
             OutlinedButton(onClick = onStop) { Text(text.stop) }
         }
         devices.forEach { device ->
-            val paired = device.bondState == BluetoothDevice.BOND_BONDED
             ElevatedCard(Modifier.fillMaxWidth()) {
                 Row(Modifier.padding(12.dp).fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                     Column {
-                        Text(device.name ?: text.unknownDevice)
+                        Text(device.label)
                         Text(device.address, style = MaterialTheme.typography.bodySmall)
                     }
-                    Button(onClick = { onConnect(device) }) { Text(if (paired) text.connectButton else text.pair) }
+                    Button(onClick = { onConnect(device) }) { Text(if (device.bonded) text.connectButton else text.pair) }
                 }
             }
         }

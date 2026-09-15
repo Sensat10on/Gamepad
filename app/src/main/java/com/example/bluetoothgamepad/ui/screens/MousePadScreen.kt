@@ -68,8 +68,12 @@ private const val CLICK_HOLD_MS = 60L
     Box(modifier.background(control.copy(alpha=.32f),RoundedCornerShape(28.dp)).border(2.dp,control,RoundedCornerShape(28.dp)).pointerInput(settings.touchpadSpeed,settings.touchpadDoubleTapMs){
         awaitEachGesture {
             val down=awaitFirstDown();var moved=false
-            do {val event=awaitPointerEvent();val change=event.changes.firstOrNull()?:break
-                if(change.pressed&&change.id==down.id){val delta=change.positionChange();if(delta.getDistance()>.7f){moved=true;val x=(delta.x*settings.touchpadSpeed).roundToInt().coerceIn(-MAX_POINTER_DELTA,MAX_POINTER_DELTA);val y=(delta.y*settings.touchpadSpeed).roundToInt().coerceIn(-MAX_POINTER_DELTA,MAX_POINTER_DELTA);if(x!=0||y!=0)onMove(x,y,0)};change.consume()}
+            do {val event=awaitPointerEvent()
+                // Track only the finger that started the gesture: event.changes carries every
+                // pointer, so taking the first one let a second finger jump the cursor and end the
+                // drag early.
+                val change=event.changes.firstOrNull{it.id==down.id}?:break
+                if(change.pressed){val delta=change.positionChange();if(delta.getDistance()>.7f){moved=true;val x=(delta.x*settings.touchpadSpeed).roundToInt().coerceIn(-MAX_POINTER_DELTA,MAX_POINTER_DELTA);val y=(delta.y*settings.touchpadSpeed).roundToInt().coerceIn(-MAX_POINTER_DELTA,MAX_POINTER_DELTA);if(x!=0||y!=0)onMove(x,y,0)};change.consume()}
             }while(change.pressed)
             if(!moved){val now=SystemClock.uptimeMillis();if(now-lastTapAt<=settings.touchpadDoubleTapMs){
                 lastTapAt=0

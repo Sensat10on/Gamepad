@@ -26,6 +26,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -48,7 +49,9 @@ private enum class Page { CONNECT, GAMEPAD, SETTINGS, APPEARANCE }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable fun AppNavigation(vm: GamepadViewModel) {
-    var page by remember { mutableStateOf(Page.CONNECT) }
+    // Saveable: changing the orientation lock recreates the activity, and a plain `remember` sent
+    // the user back to the connection screen right after they pressed Save in the settings.
+    var page by rememberSaveable { mutableStateOf(Page.CONNECT) }
     var menuExpanded by remember { mutableStateOf(false) }
     val state by vm.connection.collectAsStateWithLifecycle()
     val devices by vm.devices.collectAsStateWithLifecycle()

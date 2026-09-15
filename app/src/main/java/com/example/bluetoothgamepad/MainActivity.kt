@@ -54,6 +54,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onStart() {
         super.onStart()
+        vm.resumeInput()
         // Picks up a permission granted from system settings while the app was in the background.
         startAndBind()
     }
@@ -69,6 +70,9 @@ class MainActivity : ComponentActivity() {
             unbindService(serviceConnection)
             bound = false
         }
+        // Without this the flag stayed set after an activity recreation and the service was never
+        // started again, leaving the user with no way to recover the session.
+        serviceRequested = false
         super.onDestroy()
     }
 

@@ -80,7 +80,13 @@ class HidConnectionManager(
     /** True once the HID application has actually been accepted by the Bluetooth stack. */
     val isRegistered: Boolean get() = registered
 
-    fun bondedDevices(): List<BluetoothDevice> = adapter.bondedDevices.sortedBy { it.name ?: it.address }
+    /**
+     * Bonded devices, or an empty list when `BLUETOOTH_CONNECT` was revoked between the caller's
+     * own check and this call. The permission is revocable at any moment, so the access itself has
+     * to be guarded — not only the check that preceded it.
+     */
+    fun bondedDevices(): List<BluetoothDevice> =
+        runCatching { adapter.bondedDevices.orEmpty().sortedBy { it.name ?: it.address } }.getOrDefault(emptyList())
 
     fun connect(device: BluetoothDevice): Boolean {
         if (!registered) return false
