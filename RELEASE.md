@@ -1,6 +1,6 @@
 # Release runbook
 
-Everything needed to produce, verify and publish a build of **BlueTooth GamePad & Mouse**.
+Everything needed to produce, verify and publish a build of **Bluetooth GamePad & Mouse**.
 
 The app is distributed as a sideloaded APK from a private GitHub repository. If that ever changes
 (Google Play, F-Droid), read section 6 first — there is one blocking item there.
@@ -95,7 +95,7 @@ adb logcat | findstr BluetoothGamepad
 ## 5. Publish
 
 ```powershell
-git tag -a v1.2.0 -m "BlueTooth GamePad & Mouse 1.2.0"
+git tag -a v1.2.0 -m "Bluetooth GamePad & Mouse 1.2.0"
 git push origin main --tags
 ```
 
@@ -108,7 +108,7 @@ git push origin main --tags
 
 Currently **not** possible, for two reasons:
 
-1. `applicationId` is `com.example.bluetoothgamepad`. Play rejects `com.example.*`.
+1. `applicationId` is `io.github.sensat10on.gamepad`. Play rejects `com.example.*`.
    Changing it later means a different app listing and a fresh install for every user, so decide
    before the user base grows. The rename touches `namespace`/`applicationId` in
    `app/build.gradle.kts` plus every `package`/directory under `app/src/main/java`.

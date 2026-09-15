@@ -1,4 +1,4 @@
-# BlueTooth GamePad & Mouse
+# Bluetooth GamePad & Mouse
 
 ## Current features
 
@@ -77,7 +77,7 @@ Android 12+ uses `BLUETOOTH_CONNECT`, `BLUETOOTH_SCAN`, and `BLUETOOTH_ADVERTISE
 - Layout profiles change the on-screen control set (and face-button glyphs), nothing more. They add no vendor authentication, XInput support, DualSense features, audio, lightbar or adaptive triggers.
 - Triggers are analog-only; games that expect a discrete L2/R2 button may not react.
 - Hosts must support the Bluetooth HID Device role and may cache old descriptors; remove and re-pair after descriptor changes.
-- The application id is still `com.example.bluetoothgamepad`, which Google Play rejects. Changing it later forces users to reinstall, so it should be decided before the user base grows.
+- The application id changed to `io.github.sensat10on.gamepad` for the Play release, so the app is a **different application** from any earlier `com.example.*` build: users must uninstall the old one and install anew, which resets their settings.
 
 ## Troubleshooting
 

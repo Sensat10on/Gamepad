@@ -19,11 +19,11 @@ val releaseStoreFile = keystoreProperties.getProperty("storeFile")
 val hasReleaseSigning = !releaseStoreFile.isNullOrBlank() && rootProject.file(releaseStoreFile).exists()
 
 android {
-    namespace = "com.example.bluetoothgamepad"
+    namespace = "io.github.sensat10on.gamepad"
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.example.bluetoothgamepad"
+        applicationId = "io.github.sensat10on.gamepad"
         // BluetoothHidDevice (the HID Device role used by this app) was added in API 28,
         // so 28 is the hard floor: the app cannot run on anything older.
         minSdk = 28

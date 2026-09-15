@@ -1,4 +1,4 @@
-# Аудит проекта «BlueTooth GamePad & Mouse» 1.1.0
+# Аудит проекта «Bluetooth GamePad & Mouse» 1.1.0
 
 Дата аудита: текущее состояние ветки `main` (HEAD `483179d`), версия `versionCode=2`, `versionName=1.1.0`.
 Объём: 30 исходных файлов Kotlin (~1 100 строк), Gradle-конфигурация, манифест, ресурсы, собранные артефакты.
@@ -12,7 +12,7 @@
 | ID | Статус | Что сделано |
 |---|---|---|
 | P0-1 | **исправлено** | `signingConfigs.release` из git-ignored `keystore.properties`, `keystore.properties.example`, `app/proguard-rules.pro`, предупреждение при сборке без ключа; порядок выпуска — `RELEASE.md`. Сам ключ должен создать владелец репозитория |
-| P0-2 | **отложено осознанно** | `applicationId` не менялся: приватная раздача APK этого не требует, а смена ID заставит всех пользователей переустанавливать приложение, и решать это нужно вместе с будущей публикацией. Зафиксировано в README и `RELEASE.md` |
+| P0-2 | **исправлено** | `applicationId` и `namespace` заменены на `io.github.sensat10on.gamepad`, переименованы все пакеты Kotlin (45 файлов). Сделано до первой публикации — после неё смена ID означала бы новое приложение |
 | P0-3 | **исправлено** | R8 + `shrinkResources` включены, добавлены правила ProGuard. **APK: 24.13 МБ → 3.17 МБ** |
 | P0-4 | **исправлено** | Все 8 ошибок `MissingPermission` устранены проверками и точечными `@SuppressLint` с обоснованием. `lintDebug` проходит: **0 errors, 1 warning** (было 9/18) |
 | P0-5 | **исправлено** | `MainActivity` проверяет результат запроса разрешений, не запускает службу без `BLUETOOTH_CONNECT`, показывает баннер с переходом в настройки; `startForeground` обёрнут в try/catch; добавлен `onStart`-путь для разрешения, выданного из системных настроек |
@@ -65,7 +65,7 @@
 **Доказательства**
 
 ```
-apksigner verify --print-certs Release\BlueTooth-GamePad-Mouse-1.1.0.apk
+apksigner verify --print-certs Release\Bluetooth-GamePad-Mouse-1.1.0.apk
   Verified using v3 scheme: true
   Signer #1 certificate DN: C=US, O=Android, CN=Android Debug
   Signer #1 certificate SHA-256: 72a58ca5...72e9861
@@ -80,9 +80,11 @@ apksigner verify --print-certs Release\BlueTooth-GamePad-Mouse-1.1.0.apk
 
 ---
 
-### P0-2. `applicationId = "com.example.bluetoothgamepad"`
+### P0-2. `applicationId = "com.example.bluetoothgamepad"` (на момент аудита)
 
-`app/build.gradle.kts:7,11` — и `namespace`, и `applicationId` используют префикс `com.example`. Google Play не принимает идентификаторы, начинающиеся с `com.example`. Смена `applicationId` позже = новое приложение в сторе и потеря всех установок. Менять сейчас (например, `io.github.<owner>.gamepad`), заодно переименовать пакет.
+`app/build.gradle.kts:7,11` — и `namespace`, и `applicationId` использовали префикс `com.example`. Google Play не принимает идентификаторы, начинающиеся с `com.example`. Смена `applicationId` позже = новое приложение в сторе и потеря всех установок.
+
+**Исправлено:** заменено на `io.github.sensat10on.gamepad` вместе с пакетами Kotlin.
 
 ---
 

@@ -1,11 +1,10 @@
 # Публикация в Google Play — чеклист
 
-Состояние проекта: versionCode 4, versionName 1.2.0, minSdk 28, **targetSdk 36**, compileSdk 36.
-Release APK ≈ 2.84 МБ. Тесты 23/23, lint 0 ошибок.
+Состояние проекта: **`io.github.sensat10on.gamepad`**, versionCode 4, versionName 1.2.0,
+minSdk 28, **targetSdk 36**, compileSdk 36. AAB 3.25 МБ, APK 2.85 МБ. Тесты 23/23, lint 0 ошибок.
+Release подписан upload-ключом `CN=Sensat10on` (не debug).
 
-Документ описывает, что уже сделано в коде, что нужно сделать в Play Console и какие решения
-остались за владельцем продукта. Требования сверены с официальной справкой Google Play
-12 сентября 2026 г.
+Требования сверены с официальной справкой Google Play 12 сентября 2026 г.
 
 ---
 
@@ -14,153 +13,177 @@ Release APK ≈ 2.84 МБ. Тесты 23/23, lint 0 ошибок.
 | Срок | Что | Последствие |
 |---|---|---|
 | **30.09.2026** | Зарегистрировать имя пакета в **Android developer verification** (Play Console → Home → Android developer verification) | *«Apps not registered by Sep 30, 2026 will be removed from Play»* |
-| 31.08.2026 (уже наступил) | Новые приложения и обновления обязаны таргетить **API 36** | Загрузка не пройдёт. В проекте уже исправлено |
-
-Ссылки: [Registering Play package names](https://support.google.com/googleplay/android-developer/answer/16984799?hl=en) ·
-[Target API level requirements](https://support.google.com/android-developer/answer/11926878?hl=en) ·
-[developer.android.com/developer-verification](https://developer.android.com/developer-verification)
+| 31.08.2026 (наступил) | Новые приложения и обновления обязаны таргетить **API 36** | ✅ уже исправлено |
 
 ---
 
-## 1. Блокеры, которые нужно закрыть до загрузки
+## 1. Сделано в коде (пункты 1–7)
 
-### 1.1. applicationId — решение владельца
+### 1.1. ✅ applicationId заменён
+`com.example.bluetoothgamepad` → **`io.github.sensat10on.gamepad`**. Переименованы `namespace`,
+`applicationId`, все пакеты Kotlin (45 файлов) и дерево каталогов.
 
-Сейчас: `com.example.bluetoothgamepad` (и `namespace`, и `applicationId`).
+**Важно для пользователей:** приложение на телефоне теперь другое — старая debug-сборка и
+Play-версия не обновляются друг на друга, требуется удалить и поставить заново. Настройки при
+этом теряются.
 
-Google официально **не публикует** правило «com.example отклоняется», но использует этот префикс
-как placeholder и предписывает заменить его. Практически: консоль такие загрузки отклоняет.
-Главное — **applicationId нельзя изменить после первой публикации**: *«If you change the
-application ID, Google Play Store treats the upload as a completely different app.»*
+### 1.2. ✅ Upload-ключ создан, AAB собран
+- `release.jks` — RSA 4096, срок действия до 24.07.2059 (Play требует «после 22.10.2033»).
+- `keystore.properties` — пароль сгенерирован (40 символов) и лежит **только** в этом файле.
+  Оба файла в `.gitignore`.
+- `app/build/outputs/bundle/release/app-release.aab` — 3.25 МБ, подпись проверена (`jar verified`).
+- `app/build/outputs/apk/release/app-release.apk` — 2.85 МБ, `Signer #1 certificate DN: CN=Sensat10on`.
 
-Предлагаемый вариант, производный от вашего GitHub: `io.github.sensat10on.gamepad`.
-Менять нужно и `namespace`, и пакеты Kotlin — это механическая правка ~35 файлов; сделать её надо
-**один раз и до загрузки**.
+> **Сделайте резервную копию `release.jks` и `keystore.properties` в двух независимых местах.**
+> Потеря ключа = невозможность обновлять приложение. Google может сбросить upload key при
+> компрометации, но не app signing key.
 
-### 1.2. Ключ подписи
+Play App Signing обязателен: при первой загрузке AAB Google создаст app signing key и будет
+подписывать им финальные APK.
 
-Сейчас release-сборка подписывается **отладочным** ключом (для локальной установки). Для Play это
-недопустимо: *«most app stores (including the Google Play Store) do not accept apps signed with a
-debug certificate»*.
+### 1.3. ✅ Политика конфиденциальности
+`PRIVACY.md` и готовая для GitHub Pages копия `docs/privacy.md`.
 
-Нужно:
-1. Создать upload-ключ: `keytool -genkeypair -v -keystore release.jks -alias gamepad -keyalg RSA -keysize 4096 -validity 10000`
-   (срок действия должен заканчиваться **после 22.10.2033**).
-2. Положить `keystore.properties` рядом с проектом (файл уже поддержан в `app/build.gradle.kts`
-   и внесён в `.gitignore`).
-3. Собрать **AAB**, а не APK: `./gradlew bundleRelease` → `app/build/outputs/bundle/release/app-release.aab`.
-4. Play App Signing обязателен для новых приложений; upload key ≠ app signing key.
+Как опубликовать (2 минуты):
+1. Запушьте репозиторий с папкой `docs/`.
+2. GitHub → Settings → Pages → Source: *Deploy from a branch* → Branch: `main`, папка `/docs` → Save.
+3. Через минуту URL: `https://sensat10on.github.io/Gamepad/privacy.html`
 
-Загружать нужно AAB с **release**-подписью. Важно понимать: пользователи вашей локальной
-debug-подписанной сборки обновиться до Play-версии **не смогут** — потребуется удалить и
-поставить заново.
+⚠️ **Репозиторий приватный, а Play требует публично доступный URL.** Варианты:
+- сделать репозиторий публичным;
+- либо создать отдельный публичный репозиторий только с политикой;
+- либо опубликовать текст как публичный Gist — URL гиста тоже подходит
+  (требование: «active, publicly accessible and non-geofenced URL, no PDFs»).
 
-### 1.3. Privacy policy
+⚠️ **Замените контактный e-mail** в обоих файлах: сейчас там технический адрес из коммитов
+(`173087196+Sensat10on@users.noreply.github.com`), почта на него не приходит. Нужен рабочий
+ящик — тот же, что укажете в Play Console → Store settings → Contact details.
 
-Обязательна **для всех** приложений, даже не собирающих данные: *«Apps that do not access any
-personal and sensitive user data must still submit a privacy policy.»* Нужен активный публичный
-URL (не PDF, без геоограничений) + ссылка внутри приложения.
+### 1.4. ✅ Сценарий видео для декларации foreground service
+Play требует *«a link to a video demonstrating each foreground service feature»*. Снимите
+экран телефона, 40–60 секунд, без монтажа:
 
-Черновик готов: `PRIVACY.md`. Осталось: указать контактный e-mail и разместить (например,
-GitHub Pages из этого репозитория).
+| # | Кадр | Что должно быть видно |
+|---|---|---|
+| 1 | Экран «Подключение» | приложение запущено, список сопряжённых устройств |
+| 2 | Тап «Подключить» на хосте | состояние меняется на «Подключено», сверху появляется постоянное уведомление |
+| 3 | Потянуть шторку | уведомление «Bluetooth GamePad & Mouse» с действием «Остановить и выйти» |
+| 4 | Свернуть приложение кнопкой Home | уведомление остаётся, игра/ТВ продолжает принимать ввод |
+| 5 | Вернуться, нажать кнопку на экране | на хосте видно отклик (курсор, кнопка в игре) |
+| 6 | Действие «Остановить и выйти» | уведомление исчезает, сессия завершается |
 
-### 1.4. Декларация foreground service `connectedDevice`
+Что написать в описании: *«Foreground service type `connectedDevice` keeps the Bluetooth HID
+session alive while the user plays. Deferring or interrupting it disconnects the controller
+mid-game. The user starts it by tapping Connect and stops it with the notification action or the
+Stop and exit button.»*
 
-Обязательна при targetSdk 34+. Потребуются:
-1. описание функциональности;
-2. влияние на пользователя, если задача будет отложена или прервана системой;
-3. **ссылка на видео**, демонстрирующее, как пользователь включает эту функцию;
-4. выбранный use case — для нас «Continuous Data Transfer to an External Device».
+Use case для выбора в форме: **Continuous Data Transfer to an External Device**.
 
-Заявлять тип без обоснования нельзя: это нарушение Device and Network Abuse.
-Ссылка: [Understanding foreground service and full-screen intent requirements](https://support.google.com/googleplay/android-developer/answer/13392821?hl=en)
+### 1.5. ✅ Тип аккаунта — что выбрать
+| | Личный аккаунт | Организация |
+|---|---|---|
+| Closed-тест до Production | **12 тестеров × 14 непрерывных дней** (если аккаунт создан после 13.11.2023) | не требуется |
+| Верификация | личность + **device verification** (реальный Android-девайс и приложение Play Console) | D-U-N-S (до 30 дней), сайт, телефон |
+| Публичные данные | legal name, страна, e-mail | + адрес и телефон |
+
+Если аккаунт личный и создан после 13.11.2023 — **начинайте closed-тест заранее**, это самые
+долгие 14 дней в процессе. Пока критерий не выполнен, кнопки Production и Pre-registration
+отключены. Тестеры должны быть подписаны непрерывно: отписался и вернулся — отсчёт заново.
+
+### 1.6. ✅ Инструкция для ревьюеров (App access)
+Скопируйте в Play Console → App content → App access. Без этого высок риск отказа
+«app is not functional»: приложение бессмысленно на одном устройстве.
+
+```
+No account or login is required.
+
+This app turns an Android phone into a standard Bluetooth HID gamepad, mouse and
+Android TV remote. It needs a SECOND device to be meaningful.
+
+To test:
+1. Grant the "Nearby devices" permission when asked (Android 12+). Without it the app
+   cannot register its HID profile and shows a banner with a shortcut to settings.
+2. Pair the test device with any Bluetooth host from the system Bluetooth settings:
+   - Android TV / Google TV: Settings > Remotes & Accessories > Pair accessory
+   - Windows PC: Settings > Bluetooth & devices > Add device > Bluetooth
+   - another Android phone/tablet
+   The host must support the Bluetooth HID Device role; most Android TV boxes, PCs
+   and phones do.
+3. Open the app, pick a profile in Settings, select the paired device on the
+   Connection screen and tap Connect.
+4. Move the sticks, press the buttons and use the touchpad profile; verify input on
+   the host (on Windows run joy.cpl; on Android TV navigate the system UI).
+
+Marker: the state line on the Connection screen shows "Connected" and a permanent
+notification "Bluetooth GamePad & Mouse" appears.
+
+Notes for the reviewer:
+- The app has no INTERNET permission and never transmits data.
+- The foreground service keeps the HID session alive while the user plays; it is
+  started by tapping Connect and stopped by the notification action or "Stop and exit".
+- A demo video of the whole flow is attached to the foreground service declaration.
+```
+
+### 1.7. ✅ Название приложения
+«BlueTooth GamePad & Mouse» → **«Bluetooth GamePad & Mouse»** (исправлена заглавная T).
+Обновлены `strings.xml`, `Localization.kt` (ru/uk/en), README, RELEASE_NOTES, PRIVACY.
 
 ---
 
-## 2. Что уже сделано в коде
-
-| Пункт | Статус |
-|---|---|
-| targetSdk 35 → **36** | ✅ (иначе загрузка отклоняется) |
-| Adaptive launcher icon (был один PNG 1254×1254) | ✅ vector + фон, `mipmap-anydpi-v26` |
-| R8 + shrinkResources, ProGuard-правила | ✅ APK 24 МБ → 2.84 МБ |
-| Конфигурация release-подписи через `keystore.properties` | ✅ |
-| `debuggable` в release | ✅ отсутствует (проверено `aapt2 dump`) |
-| Разрешение `INTERNET` | ✅ отсутствует — приложение физически не может передавать данные |
-| Privacy policy | ✅ черновик `PRIVACY.md` |
-| Store-ассеты: иконка 512×512, feature graphic 1024×500 | ✅ в `store/` |
-| Отчёт аудита и runbook выпуска | ✅ `AUDIT.md`, `RELEASE.md` |
-
----
-
-## 3. Что нужно заполнить в Play Console
+## 2. Что заполнить в Play Console
 
 | Раздел | Что указать |
 |---|---|
-| **Data safety** | «Данные не собираются и не передаются». Приложение обрабатывает данные только на устройстве, разрешения `INTERNET` нет вообще. Заполнить обязаны все, включая приложения без сбора данных |
-| **Privacy policy** | URL из п. 1.3 |
+| **Data safety** | «Данные не собираются и не передаются». Разрешения `INTERNET` нет вообще |
+| **Privacy policy** | URL из п. 1.3 (обязателен для всех приложений) |
 | **Content rating** | Пройти опросник IARC. Без рейтинга приложение «Unrated» и может быть удалено |
-| **Ads** | **Нет** рекламы. Важно: если внутри появятся баннеры для продвижения *своих* приложений — это уже «Contains ads» |
-| **Target audience** | Не выбирать детские возрастные группы «на всякий случай» — это тянет Families Policy. Форма не заполнится, пока не заданы Ads, app access и privacy policy |
-| **App access** | Экран подключения требует Bluetooth-разрешений. Ревьюеру нужна инструкция: приложение работает без аккаунта, но требует разрешения «Рядом с устройствами» и **второго устройства** (ТВ/ПК). Это стоит описать явно — иначе высок риск отказа «app is not functional» |
+| **Ads** | **Нет**. Если появятся баннеры для продвижения своих приложений — это уже «Contains ads» |
+| **Target audience** | Не выбирать детские группы «на всякий случай» — тянет Families Policy. Форма не откроется, пока не заданы Ads, app access и privacy policy |
+| **App access** | Инструкция из п. 1.6 |
+| **Foreground service types** | `connectedDevice` + описание и видео из п. 1.4 |
 | **News declaration** | Нет |
-| **Foreground service types** | Декларация `connectedDevice` + видео (п. 1.4) |
-
-Отдельно: приложение нельзя проверить на одном устройстве — ему нужен Bluetooth-хост.
-Дайте ревьюерам максимально подробную инструкцию и, если возможно, видео.
 
 ---
 
-## 4. Ассеты для листинга
+## 3. Ассеты для листинга
 
-| Актив | Требование | Готово |
+| Актив | Требование | Статус |
 |---|---|---|
 | Иконка | 32-bit PNG с альфой, **512×512**, ≤ 1 МБ | ✅ `store/play-icon-512.png` |
 | Feature graphic | JPEG или 24-bit PNG **без альфы**, **1024×500** | ✅ `store/play-feature-graphic-1024x500.png` |
-| Скриншоты | минимум **2**, до **8** на тип устройства; JPEG/PNG без альфы; 320–3840 px, максимум ≤ 2× минимума | ❌ нужно выбрать из реальных снимков |
-| Short description | ≤ **80** символов | ❌ |
-| Full description | ≤ **4000** символов | ❌ |
-| Название приложения | ≤ 30 символов | ⚠️ сейчас «BlueTooth GamePad & Mouse» — обратите внимание на необычное «BlueTooth» |
-| Контактный e-mail | обязателен | ❌ |
+| Скриншоты | минимум **2**, до **8** на тип устройства; без альфы; 320–3840 px, максимум ≤ 2× минимума | ⬜ выбрать из `screens/` |
+| Short description | ≤ **80** символов | ⬜ |
+| Full description | ≤ **4000** символов | ⬜ |
+| Контактный e-mail | обязателен | ⬜ |
 
-Скриншоты: у вас есть реальные кадры в `screens/` (1080×2340 и 2340×1080) — они подходят.
-Для попадания в рекомендательные форматы желательно ≥4 скриншотов с разрешением ≥1080 px.
-
----
-
-## 5. Аккаунт разработчика
-
-| Требование | Детали |
-|---|---|
-| Верификация личности | Play Console → привязка Google Payments profile; публично показываются legal name, страна, e-mail |
-| Device verification | Для **новых личных** аккаунтов: подтвердить наличие реального Android-устройства через мобильное приложение Play Console |
-| Closed testing | Личные аккаунты, созданные после 13.11.2023: **12 тестеров × 14 непрерывных дней** до доступа к Production. Если тестер отписался и вернулся — 14 дней считаются заново |
-| Organization | Не требуется, если аккаунт личный. Для организации обязателен D-U-N-S |
+Скриншоты: в `screens/` есть реальные кадры 1080×2340 и 2340×1080 — подходят. Для попадания в
+рекомендательные форматы желательно ≥4 штук с разрешением ≥1080 px.
 
 ---
 
-## 6. Порядок действий
+## 4. Порядок действий
 
-1. Решить `applicationId` (п. 1.1) и переименовать пакеты.
-2. Создать upload-ключ, собрать AAB с release-подписью.
-3. Проверить релизный AAB на реальном устройстве (R8).
-4. Зарегистрировать имя пакета в Android developer verification — **до 30.09.2026**.
-5. Пройти верификацию личности и (для личного аккаунта) device verification.
-6. Создать приложение в Play Console, загрузить AAB в **closed testing**.
-7. Заполнить: Data safety, privacy policy, content rating, ads, target audience, app access,
+1. ✅ Переименован пакет, создан ключ, собран подписанный AAB.
+2. ⬜ Проверить `app-release.apk` (release, минифицированный) на реальном устройстве.
+3. ⬜ Сделать резервную копию `release.jks` + `keystore.properties`.
+4. ⬜ Зарегистрировать имя пакета в Android developer verification — **до 30.09.2026**.
+5. ⬜ Опубликовать политику конфиденциальности, заменить контактный e-mail.
+6. ⬜ Пройти верификацию личности (+ device verification для личного аккаунта).
+7. ⬜ Создать приложение в Play Console, загрузить AAB в **closed testing**.
+8. ⬜ Заполнить Data safety, privacy policy, content rating, ads, target audience, app access,
    декларацию `connectedDevice` с видео.
-8. Добавить store-ассеты: иконка, feature graphic, ≥2 скриншота, описания, контакт.
-9. Запустить closed-тест на 12 тестеров × 14 дней.
-10. Подать заявку на Production (Dashboard → Apply for production), рассмотрение ~7 дней.
-11. После одобрения — поэтапный выпуск (staged rollout) и мониторинг pre-launch report.
+9. ⬜ Добавить store-ассеты: иконка, feature graphic, скриншоты, описания, контакт.
+10. ⬜ Запустить closed-тест (12 тестеров × 14 дней, если аккаунт личный и новый).
+11. ⬜ Подать заявку на Production (Dashboard → Apply for production), рассмотрение ~7 дней.
+12. ⬜ Staged rollout и мониторинг Pre-launch report.
 
 ---
 
-## 7. Открытые вопросы к владельцу
+## 5. Что осталось за владельцем
 
-1. **applicationId** — какой использовать? (предлагаю `io.github.sensat10on.gamepad`)
-2. **Контактный e-mail** для privacy policy и листинга.
-3. **Где разместить** privacy policy (GitHub Pages из этого репозитория?).
-4. **Название приложения** — оставляем «BlueTooth GamePad & Mouse» или правим на «Bluetooth…»?
-5. **Видео** для декларации foreground service — запишете сами или нужен сценарий?
-6. **Тип аккаунта** — личный или организация? От этого зависит необходимость closed-теста.
+1. **Контактный e-mail** — рабочий ящик для политики и листинга.
+2. **Где разместить политику** — репозиторий приватный, нужен публичный URL (п. 1.3).
+3. **Видео** для декларации foreground service — снять по сценарию из п. 1.4.
+4. **Резервная копия ключа** — два независимых места.
+5. **Скриншоты и описания** — выбрать кадры, написать тексты.
+6. **Тип аккаунта** — от него зависит, нужен ли closed-тест на 12 человек.
