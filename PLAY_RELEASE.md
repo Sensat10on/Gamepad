@@ -152,8 +152,9 @@ Notes for the reviewer:
 | Иконка | 32-bit PNG с альфой, **512×512**, ≤ 1 МБ | ✅ `store/play-icon-512.png` |
 | Feature graphic | JPEG или 24-bit PNG **без альфы**, **1024×500** | ✅ `store/play-feature-graphic-1024x500.png` |
 | Скриншоты | минимум **2**, до **8** на тип устройства; без альфы; 320–3840 px, максимум ≤ 2× минимума | ⬜ выбрать из `screens/` |
-| Short description | ≤ **80** символов | ⬜ |
-| Full description | ≤ **4000** символов | ⬜ |
+| Short description | ≤ **80** символов | ✅ 71 (ru) / 73 (en) — `store/listing.md` |
+| Full description | ≤ **4000** символов | ✅ 1693 (ru) / 1608 (en) — `store/listing.md` |
+| Название | ≤ 30 символов | ✅ «Bluetooth GamePad & Mouse» — 25 |
 | Контактный e-mail | обязателен | ⬜ |
 
 Скриншоты: в `screens/` есть реальные кадры 1080×2340 и 2340×1080 — подходят. Для попадания в
